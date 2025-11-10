@@ -1,0 +1,46 @@
+# Environment files with credentials
+.env
+*.env
+.env.*
+
+# Streamlit secrets
+.streamlit/secrets.toml
+**/.streamlit/secrets.toml
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data exports
+*.csv
+*.json
+*.xlsx
+!bma_locations.csv
+!bma_events.csv
+
+# Logs
+*.log
+
+# Database dumps
+*.sql
+*.db
+*.sqlite
