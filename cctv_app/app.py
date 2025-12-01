@@ -4,11 +4,14 @@ import numpy as np
 import httpx
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE = os.getenv("BMA_BASE", "http://www.bmatraffic.com")
 UA = os.getenv("BMA_UA", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36")
 REWARM_SECONDS = int(os.getenv("REWARM_SECONDS", "25"))
-TIMEOUT = float(os.getenv("TIMEOUT", "10"))
+TIMEOUT = float(os.getenv("TIMEOUT", "300"))
 
 app = FastAPI(title="BMA Snapshot Microservice", version="0.2.0")
 app.add_middleware(
@@ -26,6 +29,7 @@ client = httpx.AsyncClient(
     },
     timeout=httpx.Timeout(TIMEOUT),
     follow_redirects=True,
+    limits=httpx.Limits(max_keepalive_connections=5, max_connections=10, keepalive_expiry=30),
 )
 
 _last_warm = {}
@@ -40,7 +44,17 @@ async def warmup(play_id: str) -> str:
         now = time.time()
         if now - _last_warm.get(play_id, 0) < 2:
             return f"{BASE}/PlayVideo.aspx?ID={play_id}"
-        await client.get(f"{BASE}/index.aspx")
+
+        # Retry logic for index.aspx
+        for attempt in range(3):
+            try:
+                await client.get(f"{BASE}/index.aspx")
+                break
+            except httpx.ReadTimeout:
+                if attempt == 2:
+                    raise
+                await asyncio.sleep(1)
+
         play_url = f"{BASE}/PlayVideo.aspx?ID={urllib.parse.quote(str(play_id))}"
         r = await client.get(play_url)
         r.raise_for_status()
